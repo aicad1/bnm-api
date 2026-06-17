@@ -4,6 +4,10 @@ import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "OK - BNM API is running"
+
 @app.route("/bnm")
 def bnm():
     date = request.args.get("date")
