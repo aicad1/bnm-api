@@ -10,29 +10,48 @@ def home():
 
 @app.route("/bnm")
 def bnm():
-    date = request.args.get("date")
-    currency = request.args.get("currency")
+    try:
+        date = request.args.get("date")
+        currency = request.args.get("currency")
 
-    if not date or not currency:
-        return jsonify({"error": "missing params"}), 400
+        if not date or not currency:
+            return jsonify({"error": "missing params"}), 400
 
-    url = f"https://www.bnm.md/ru/official_exchange_rates?get_xml=1&date={date}"
+        url = f"https://www.bnm.md/ru/official_exchange_rates?get_xml=1&date={date}"
 
-    r = requests.get(url, timeout=10)
-    r.raise_for_status()
+        r = requests.get(url, timeout=10)
 
-    root = ET.fromstring(r.content)
+        # защита от плохого ответа
+        if r.status_code != 200:
+            return jsonify({"error": "BNM not available"}), 502
 
-    for valute in root.findall(".//Valute"):
-        if valute.find("CharCode").text == currency:
-            value = valute.find("Value").text
-            return jsonify({
-                "currency": currency,
-                "date": date,
-                "rate": float(value.replace(",", "."))
-            })
+        content = r.text
 
-    return jsonify({"error": "not found"}), 404
+        # если BNM вернул не XML (часто бывает)
+        if "<ValCurs" not in content:
+            return jsonify({"error": "invalid response from BNM"}), 502
+
+        root = ET.fromstring(r.content)
+
+        for valute in root.findall(".//Valute"):
+            char = valute.find("CharCode")
+            value = valute.find("Value")
+
+            if char is not None and value is not None:
+                if char.text == currency:
+                    return jsonify({
+                        "currency": currency,
+                        "date": date,
+                        "rate": float(value.text.replace(",", "."))
+                    })
+
+        return jsonify({"error": "currency not found"}), 404
+
+    except Exception as e:
+        return jsonify({
+            "error": "server crashed",
+            "details": str(e)
+        }), 500
 
 
 if __name__ == "__main__":
