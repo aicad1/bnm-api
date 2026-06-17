@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import xml.etree.ElementTree as ET
 
+
+
 app = Flask(__name__)
 
 @app.route("/")
@@ -19,7 +21,7 @@ def bnm():
 
         url = f"https://www.bnm.md/ru/official_exchange_rates?get_xml=1&date={date}"
 
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=30)
 
         # защита от плохого ответа
         if r.status_code != 200:
